@@ -1,14 +1,16 @@
 # parameters
 ARG REPO_NAME="cuda_duckietown"
 ARG DESCRIPTION="Repo for testing Cuda coding on a Duckiebot"
-ARG MAINTAINER="Chad Samuelson (chadrs@byu.edu)"
+ARG MAINTAINER="Chad Samuelson (chadrs2@byu.edu)"
 # pick an icon from: https://fontawesome.com/v4.7.0/icons/
 ARG ICON="cube"
 
 # ==================================================>
 # ==> Do not change the code below this line
-ARG ARCH=arm64v8
-ARG DISTRO=ente
+# ARG ARCH=arm64v8
+# ARG DISTRO=ente
+ARG ARCH=arm32v7
+ARG DISTRO=daffy
 ARG BASE_TAG=${DISTRO}-${ARCH}
 ARG BASE_IMAGE=dt-machine-learning-base-environment
 ARG LAUNCHER=default
