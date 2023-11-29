@@ -1,0 +1,62 @@
+[IO] Elapsed time: 1.537 ms
+Image dimensions WxH are 50 x 32
+[Compute] Elapsed time: 3.152 ms
+Solution iterations: 940
+Solution is correct
+[IO] Elapsed time: 2.637 ms
+Image dimensions WxH are 768 x 768
+[Compute] Elapsed time: 137.452 ms
+Solution iterations: 3963
+Solution is correct
+[IO] Elapsed time: 3.404 ms
+Image dimensions WxH are 1000 x 750
+[Compute] Elapsed time: 216.595 ms
+Solution iterations: 3963
+Solution is correct
+[IO] Elapsed time: 6.640 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 413.149 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 1
+[IO] Elapsed time: 4.495 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 2681.465 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 2
+[IO] Elapsed time: 5.886 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 1377.536 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 4
+[IO] Elapsed time: 4.324 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 704.850 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 8
+[IO] Elapsed time: 4.274 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 372.155 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 12
+[IO] Elapsed time: 4.359 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 361.473 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 16
+[IO] Elapsed time: 4.324 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 357.870 ms
+Solution iterations: 3963
+Solution is correct
+Max threads: 20
+[IO] Elapsed time: 4.365 ms
+Image dimensions WxH are 2048 x 1024
+[Compute] Elapsed time: 328.270 ms
+Solution iterations: 3963
+Solution is correct

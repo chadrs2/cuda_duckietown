@@ -1,0 +1,32 @@
+/auto/fsh/chadrs2/hpc/libhtk/htkPPM.o: \
+ /auto/fsh/chadrs2/hpc/libhtk/htkPPM.cpp \
+ /auto/fsh/chadrs2/hpc/libhtk/htk.h \
+ /auto/fsh/chadrs2/hpc/libhtk/vendor/json11.hpp \
+ /auto/fsh/chadrs2/hpc/libhtk/htkTypes.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkAssert.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkMalloc.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkString.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkUtils.h \
+ /auto/fsh/chadrs2/hpc/libhtk/vendor/sole.hpp \
+ /auto/fsh/chadrs2/hpc/libhtk/htkArg.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkCUDA.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkCast.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkComparator.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkDirectory.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkExit.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkExport.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkFile.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkPPM.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkImage.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkImport.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkInit.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkLogger.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkMD5.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkMPI.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkSolution.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkSort.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkSparse.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkThrust.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkTimer.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkPath.h \
+ /auto/fsh/chadrs2/hpc/libhtk/htkDataset.h
