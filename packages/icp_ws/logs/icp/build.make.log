@@ -1,0 +1,4 @@
+[35m[1mScanning dependencies of target test_node[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/test_node.dir/src/test.cpp.o[0m
+[100%] [32m[1mLinking CXX executable /code/cuda_duckietown/packages/icp_ws/devel/.private/icp/lib/icp/test_node[0m
+[100%] Built target test_node

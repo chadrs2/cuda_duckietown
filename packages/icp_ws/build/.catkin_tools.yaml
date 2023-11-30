@@ -1,0 +1,6 @@
+devel_space: /code/cuda_duckietown/packages/icp_ws/devel
+install: false
+install_space: /code/cuda_duckietown/packages/icp_ws/install
+profile: default
+source_space: /code/cuda_duckietown/packages/icp_ws/src
+workspace: /code/cuda_duckietown/packages/icp_ws

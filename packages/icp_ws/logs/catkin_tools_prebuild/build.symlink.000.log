@@ -1,0 +1,12 @@
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./setup.bash
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./local_setup.zsh
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./local_setup.bash
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./setup.zsh
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./cmake.lock
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./_setup_util.py
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./env.sh
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./local_setup.sh
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/./setup.sh
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/lib/pkgconfig/catkin_tools_prebuild.pc
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake

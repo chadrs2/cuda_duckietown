@@ -1,0 +1,4 @@
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/lib/pkgconfig/icp.pc
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/lib/icp/test_node
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/share/icp/cmake/icpConfig-version.cmake
+Symlinking /code/cuda_duckietown/packages/icp_ws/devel/share/icp/cmake/icpConfig.cmake
