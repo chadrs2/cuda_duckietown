@@ -55,7 +55,17 @@ command.
 
 ### 3. Run Docker Container `dts devel run -H <duckeibot_name>.local -s -M --cmd bash`
 
+
 ### 4. Downgrade compiler in container down to 7
+
+Add 
+```
+RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 100
+RUN sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 100
+```
+to the dockerfile and `gcc-7 g++-7` to the dependencies-apt.txt
+
+Due to the changes above, the steps below should now be obsolete. 
 
 ```
 sudo apt remove gcc

@@ -1,1 +1,2 @@
 # LIST YOUR APT PACKAGES HERE
+gcc-7 g++-7

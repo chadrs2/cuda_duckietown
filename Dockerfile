@@ -53,6 +53,9 @@ ENV DT_LAUNCHER "${LAUNCHER}"
 COPY ./dependencies-apt.txt "${REPO_PATH}/"
 RUN dt-apt-install ${REPO_PATH}/dependencies-apt.txt
 
+RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 100
+RUN sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 100
+
 # install python3 dependencies
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
