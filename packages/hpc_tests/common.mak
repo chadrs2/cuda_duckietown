@@ -36,7 +36,7 @@ OPT       ?= -O3
 CPPFLAGS  += $(DEFS) -I$(HTK_DIR)
 CFLAGS    += $(OPT)
 CXXFLAGS  += -std=c++11 $(OPT)
-NVCCFLAGS := -std=c++11 $(OPT) --threads 0 -rdc=true -m64
+NVCCFLAGS := -std=c++11 $(OPT) -rdc=true -m64
 LDFLAGS   += -L$(HTK_DIR)/lib
 LDLIBS    += -lhtk
 
@@ -53,7 +53,7 @@ endif
 
 # Gencode arguments
 #SMS ?= 35 37 50 52 60 61 70 75 80 86
-SMS ?= 86
+SMS ?= 53
 
 ifeq ($(GENCODE_FLAGS),)
 # Generate SASS code for each SM architecture listed in $(SMS)

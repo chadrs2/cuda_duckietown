@@ -45,3 +45,31 @@ a launcher will be created for it. For example, the script file
 
 When launching a new container, you can simply provide `dt-launcher-my-launcher` as
 command.
+
+
+## Getting CUDA to work on Duckiebot
+
+### 1. Change Dockerfile to: `ARG ARCH=arm32v7, ARG DISTRO=daffy`
+
+### 2. Build Docker Container `dts devel build -f -H <duckiebot_name>.local`
+
+### 3. Run Docker Container `dts devel run -H <duckeibot_name>.local -s -M --cmd bash`
+
+### 4. Downgrade compiler in container down to 7
+
+```
+sudo apt remove gcc
+
+apt update
+
+apt install g++-7
+
+sudo ln -s /usr/bin/gcc-7 /usr/bin/gcc
+
+sudo ln -s /usr/bin/g++-7 /usr/bin/g++
+
+sudo ln -s /usr/bin/gcc-7 /usr/bin/cc
+
+sudo ln -s /usr/bin/g++-7 /usr/bin/c++
+```
+Run `gcc --version` to make sure it works
