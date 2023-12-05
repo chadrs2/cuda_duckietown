@@ -46,6 +46,16 @@ a launcher will be created for it. For example, the script file
 When launching a new container, you can simply provide `dt-launcher-my-launcher` as
 command.
 
+## Getting the RPLiDAR to work on the Duckiebot
+
+cd packages/icp_ws
+catkin_make
+source devel/setup.bash
+rosrun icp lidar_pub.py
+
+If the lidar throws an exception saying 'rplidar.RPLidarException: Incorrect descriptor starting bytes', replug in the lidar and restart the node/ It's likely the lidar wasn't stopped properly. Also make sure your cable is good.
+
+Add `--device=/dev/ttyACM0` to the end of the `dts devel run` command to pass the device information through to the docker container.
 
 ## Getting CUDA to work on Duckiebot
 
@@ -54,7 +64,6 @@ command.
 ### 2. Build Docker Container `dts devel build -f -H <duckiebot_name>.local`
 
 ### 3. Run Docker Container `dts devel run -H <duckeibot_name>.local -s -M --cmd bash`
-
 
 ### 4. Downgrade compiler in container down to 7
 

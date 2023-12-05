@@ -56,6 +56,9 @@ RUN dt-apt-install ${REPO_PATH}/dependencies-apt.txt
 RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 100
 RUN sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 100
 
+# Add root user to dialout, trying to read LiDAR from container
+RUN usermod -aG dialout root
+
 # install python3 dependencies
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
