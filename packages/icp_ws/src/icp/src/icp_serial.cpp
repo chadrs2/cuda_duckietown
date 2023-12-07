@@ -111,7 +111,7 @@ Eigen::MatrixXd icp_serial(int n_itr) {
 
 sensor_msgs::PointCloud get_pc_msg(Eigen::MatrixXd P_mat) {
     sensor_msgs::PointCloud pc;
-    for (int i = 0; i < P_mat.cols(), i++) {
+    for (int i = 0; i < P_mat.cols(); i++) {
         geometry_msgs::Point32 point;
         point.x = P_mat.col(i)[0];
         point.y = P_mat.col(i)[1];
@@ -149,6 +149,7 @@ int main(int argc, char** argv)
 
     // ROS spin to wait for messages
     Eigen::MatrixXd P_mat;
+    sensor_msgs::PointCloud icp_msg;
     while (ros::ok()) {
         if (!(prev_pc.points.empty()) && !(curr_pc.points.empty())) {
             P_mat = icp_serial(1);
