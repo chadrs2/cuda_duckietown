@@ -125,7 +125,7 @@ class my_lidar:
                 # Create PointCloud message
                 pointcloud_msg = PointCloud()
                 pointcloud_msg.header.stamp = rospy.Time.now()
-                pointcloud_msg.header.frame_id = "sonic/tag_mount"
+                pointcloud_msg.header.frame_id = "sonic/lidar_frame"
 
                 # Populate the PointCloud message with Point32 points
                 points = [Point32(x=float(x[i]), y=float(y[i]), z=0.0) for i in range(len(x))]

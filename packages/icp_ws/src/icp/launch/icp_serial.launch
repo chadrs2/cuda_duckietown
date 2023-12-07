@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+    <node name='lidar_pub_node' pkg='icp' type='lidar_pub.py' />
+    <node pkg="tf" type="static_transform_publisher" name="sonic_lidar_tf_publisher" args="0 0 0 0 0 0 1 map sonic/lidar_frame 10" />
+    
+    <!-- Start RVIZ in dts_gui_tools terminal -->
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find(your_package_name)/path/to/your/config_file.rviz)" /> -->
+
+    <!-- Start ICP Serial Node -->
+    <node pkg="icp" type="icp_serial_node" name="icp_serial_node" output="screen" />
+
+</launch>
