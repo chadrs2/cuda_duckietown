@@ -111,7 +111,7 @@ class my_lidar:
         try:
             # Your existing LIDAR data loop
             for i, scan in enumerate(self.lidar.iter_scans(scan_type='express', max_buf_meas=False)):
-                print(f"Iter pc: {i}")
+                # print(f"Iter pc: {i}")
                 distances = [distance / 1000 for quality, angle, distance in scan]
                 angles = [np.deg2rad(angle) for quality, angle, distance in scan]
 
@@ -119,7 +119,7 @@ class my_lidar:
                 angles = np.array(angles)
 
                 # Convert polar coordinates to Cartesian coordinates
-                x = distances * np.cos(angles)
+                x = -distances * np.cos(angles)
                 y = distances * np.sin(angles)
 
                 # Create PointCloud message

@@ -44,8 +44,9 @@ Eigen::MatrixXd icp_serial(int n_itr) {
     // Check that I have 2 point cloud scans
     // std::cout << "Made it inside!" << std::endl;
     /* BEGIN ICP ALGORITHM */
-    std::vector<Eigen::Vector2d> P;
+    Eigen::MatrixXd P(2, curr_pc.points.size());
     Eigen::MatrixXd P_mat(2, curr_pc.points.size());
+    bool didFirstItr = false;
     for (int itr = 0; itr < n_itr; itr++) {
         // std::cout << "Made it inside! 1" << std::endl;
         // Find Correspondences
@@ -54,9 +55,9 @@ Eigen::MatrixXd icp_serial(int n_itr) {
         std::vector<Eigen::Vector2d> Q;
         for (int i = 0; i < curr_pc.points.size(); i++) {
             Eigen::Vector2d p;
-            if (P.size() < curr_pc.points.size()) {
+            if (!(didFirstItr)) {
                 p << curr_pc.points[i].x, curr_pc.points[i].y;
-                P.push_back(p); 
+                P.col(i) = p; 
             } else {
                 p = P_mat.col(i);
             }
@@ -78,13 +79,18 @@ Eigen::MatrixXd icp_serial(int n_itr) {
         }
         // std::cout << "Made it inside! 2" << std::endl;
 
-        // Compute Mean of Point Clouds
-        Eigen::Vector2d mu_P = compute_mean(P);
+        // Compute Mean of Point Clouds & Cross-Covariance
         Eigen::Vector2d mu_Q = compute_mean(Q);
-        // std::cout << "Made it inside! 3" << std::endl;
-
-        // Compute Cross-Covariance
-        Eigen::Matrix2d cov = compute_cross_covariance(P,Q,correspondences);
+        Eigen::Vector2d mu_P;
+        Eigen::Matrix2d cov;
+        if (!(didFirstItr)) {
+            mu_P = compute_mean(P);
+            cov = compute_cross_covariance(P,Q,correspondences);
+        } else {
+            mu_P = compute_mean(P_mat);
+            cov = compute_cross_covariance(P_mat,Q,correspondences);
+        }
+        
         // std::cout << "Made it inside! 4" << std::endl;
 
         // SVD Decomposition
@@ -98,12 +104,17 @@ Eigen::MatrixXd icp_serial(int n_itr) {
         // Shift P's point cloud
         Eigen::MatrixXd R = U * V.transpose();
         Eigen::VectorXd t = mu_Q - R * mu_P;
-        for (size_t col = 0; col < P.size(); col++) {
-            P_mat.col(col) = P[col];
-        } // P_mat = 2 x N
+        if (!(didFirstItr)) {
+            for (size_t col = 0; col < P.size(); col++) {
+                P_mat.col(col) = P[col];
+            } // P_mat = 2 x N
+        }
         // std::cout << "Made it inside! R:" << R.rows() << "x" << R.cols() << " P_mat:" << P_mat.rows() << "x" << P_mat.cols() << " t:" << t.size() << std::endl;
         P_mat = R * P_mat + t.replicate(1,P_mat.cols());//t;
         // std::cout << "Made it inside! 8" << std::endl;
+        if (!(didFirstItr)) {
+            didFirstItr = true;
+        }
     }
     /* END ICP ALGORITHM */
     return P_mat;
@@ -111,6 +122,8 @@ Eigen::MatrixXd icp_serial(int n_itr) {
 
 sensor_msgs::PointCloud get_pc_msg(Eigen::MatrixXd P_mat) {
     sensor_msgs::PointCloud pc;
+    pc.header.stamp = ros::Time::now();
+    pc.header.frame_id = "sonic/lidar_frame";
     for (int i = 0; i < P_mat.cols(); i++) {
         geometry_msgs::Point32 point;
         point.x = P_mat.col(i)[0];
@@ -150,9 +163,15 @@ int main(int argc, char** argv)
     // ROS spin to wait for messages
     Eigen::MatrixXd P_mat;
     sensor_msgs::PointCloud icp_msg;
+    int icp_itr;
     while (ros::ok()) {
         if (!(prev_pc.points.empty()) && !(curr_pc.points.empty())) {
-            P_mat = icp_serial(1);
+            if (!nh.getParam("icp_itr", icp_itr))
+            {
+                ROS_ERROR("Failed to get parameter 'icp_itr'. Using default value of 1.");
+                icp_itr = 1;  // Default value
+            }        
+            P_mat = icp_serial(icp_itr);
             icp_msg = get_pc_msg(P_mat);
             pc_pub.publish(icp_msg);
         }
