@@ -51,8 +51,11 @@ command.
 #### Connect to Duckiebot
 `dts devel build -H sonic.local`
 
-`dts devel run -H sonic.local -s -M --cmd bash -f -- --device=/dev/ttyUSB0`
+`dts devel run -H sonic.local --cmd bash -f -- --device=/dev/ttyUSB0`
 
+OR
+
+`dts devel run -H sonic.local -s -M --cmd bash -f -- --device=/dev/ttyUSB0`
 
 ```
 cd packages/icp_ws
@@ -63,7 +66,7 @@ rosrun icp lidar_pub.py
 
 When using RVIZ
 In a seperate terminal run: 
-rosrun tf static_transform_publisher 0 0 0 0 0 0.1 1 map sonic/lidar_frame 10
+`rosrun tf static_transform_publisher 0 0 0 0 0 0.1 1 map sonic/lidar_frame 10`
 
   File "/code/cuda_duckietown/packages/icp_ws/src/icp/src/icp_serial.py", line 81, in icp_svd
     norm_values.append(np.linalg.norm(p - q))
