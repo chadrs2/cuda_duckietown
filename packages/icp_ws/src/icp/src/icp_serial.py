@@ -30,6 +30,14 @@ class LidarPointCloudSubscriber:
             p = p.reshape(-1, 1)
         if q.ndim == 1:
             q = q.reshape(-1, 1)
+
+        # Don't love this implementation, but it'll have to do for now
+        # chop off the longer array to match the shorter one
+        if p.shape[1] > q.shape[1]:
+            p = p[:, :q.shape[1]]
+        elif q.shape[1] > p.shape[1]:
+            q = q[:, :p.shape[1]]
+
         iterations=10
         kernel=lambda diff: 1.0
         
@@ -48,13 +56,13 @@ class LidarPointCloudSubscriber:
                     if dist < min_dist:
                         min_dist = dist
                         chosen_idx = j
-                correspondences.append((i, chosen_idx))
+                correspondences.append((i, chosen_idx, min_dist))
             return correspondences
-    
+
         def compute_cross_covariance(P, Q, correspondences, kernel=lambda diff: 1.0):
             cov = np.zeros((2, 2))
             exclude_indices = []
-            for i, j in correspondences:
+            for i, j, k in correspondences:
                 p_point = P[:, [i]]
                 q_point = Q[:, [j]]
                 weight = kernel(p_point - q_point)

@@ -48,10 +48,18 @@ command.
 
 ## Getting the RPLiDAR to work on the Duckiebot
 
+#### Connect to Duckiebot
+`dts devel build -H sonic.local`
+
+`dts devel run -H sonic.local -s -M --cmd bash -f -- --device=/dev/ttyUSB0`
+
+
+```
 cd packages/icp_ws
 catkin_make
 source devel/setup.bash
 rosrun icp lidar_pub.py
+```
 
 When using RVIZ
 In a seperate terminal run: 
