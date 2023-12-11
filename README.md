@@ -60,7 +60,7 @@ rosrun icp lidar_pub.py
 
 When using RVIZ
 In a seperate terminal run: 
-rosrun tf static_transform_publisher 0 0 0 0 0 0.1 1 map sonic/lidar_frame 10
+`rosrun tf static_transform_publisher 0 0 0 0 0 0.1 1 map sonic/lidar_frame 10`
 
   File "/code/cuda_duckietown/packages/icp_ws/src/icp/src/icp_serial.py", line 81, in icp_svd
     norm_values.append(np.linalg.norm(p - q))

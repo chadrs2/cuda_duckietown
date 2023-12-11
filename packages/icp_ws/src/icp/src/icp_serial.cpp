@@ -13,47 +13,50 @@ sensor_msgs::PointCloud prev_pc;
 sensor_msgs::PointCloud curr_pc;
 
 // std::tuple<Eigen::Vector2d, std::vector<Vector2d>> compute_mean(const std::vector<Eigen::Vector2d>& pc) {
-Eigen::Vector2d compute_mean(const std::vector<Eigen::Vector2d>& pc) {
-    Eigen::Vector2d center = Eigen::Vector2d::Zero();
-    for (const auto& vec : pc) {
-        center += vec;
-    }
-    center /= pc.size();
-    return center;
-    // std::vector<Eigen::Vector2d> centered_pc;
-    // centered_pc.reserve(pc.size());
-    // for (const auto& vec : pc) {
-    //     centered_pc.push_back(vec - center);
-    // }
-    // return std::make_tuple(center, centered_pc);
+Eigen::Vector2d compute_mean(const Eigen::MatrixXd& pc) {
+  Eigen::Vector2d center = Eigen::Vector2d::Zero();
+  for (int i = 0; i < pc.cols(); ++i) {
+    center += pc.col(i);
+  }
+  center /= pc.cols();
+  return center;
 }
 
-Eigen::Matrix2d compute_cross_covariance(std::vector<Eigen::Vector2d> P, 
-                                        std::vector<Eigen::Vector2d> Q, 
-                                        std::vector<int> correspondences) 
-{
-    Eigen::Matrix2d cov = Eigen::Matrix2d::Zero();
-    for (int i = 0; i < correspondences.size(); i++) {
-        cov += Q[correspondences[i]] * P[i].transpose();
-    }
-    return cov;
+Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P, 
+                                        const Eigen::MatrixXd& Q, 
+                                        const std::vector<int>& correspondences) {
+  Eigen::Matrix2d cov = Eigen::Matrix2d::Zero();
+  for (const int& i : correspondences) {
+    cov += Q.col(i) * P.col(i).transpose();
+  }
+  return cov;
 }
+
 
 Eigen::MatrixXd icp_serial(int n_itr) {
-    std::cout << "Success! PC Sizes: " << prev_pc.points.size() << " : " << curr_pc.points.size() << std::endl;
+    // std::cout << "Success! PC Sizes: " << prev_pc.points.size() << " : " << curr_pc.points.size() << std::endl;
     // Check that I have 2 point cloud scans
     // std::cout << "Made it inside!" << std::endl;
     /* BEGIN ICP ALGORITHM */
-    Eigen::MatrixXd P(2, curr_pc.points.size());
-    Eigen::MatrixXd P_mat(2, curr_pc.points.size());
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd Q;
+    Eigen::MatrixXd P_mat;    
     bool didFirstItr = false;
     for (int itr = 0; itr < n_itr; itr++) {
+        if (curr_pc.points.size() < prev_pc.points.size()) {
+            P = Eigen::MatrixXd(2, curr_pc.points.size());
+            Q = Eigen::MatrixXd(2, curr_pc.points.size());
+            P_mat = Eigen::MatrixXd(2, curr_pc.points.size());
+        } else {
+            P = Eigen::MatrixXd(2, prev_pc.points.size());
+            Q = Eigen::MatrixXd(2, prev_pc.points.size());
+            P_mat = Eigen::MatrixXd(2, prev_pc.points.size());
+        }
         // std::cout << "Made it inside! 1" << std::endl;
         // Find Correspondences
         int tot_dist = 0;
         std::vector<int> correspondences;
-        std::vector<Eigen::Vector2d> Q;
-        for (int i = 0; i < curr_pc.points.size(); i++) {
+        for (int i = 0; i < P.cols(); i++) {
             Eigen::Vector2d p;
             if (!(didFirstItr)) {
                 p << curr_pc.points[i].x, curr_pc.points[i].y;
@@ -63,11 +66,11 @@ Eigen::MatrixXd icp_serial(int n_itr) {
             }
             double min_dist = 1000.0;
             int corr_idx = -1;
-            for (int j = 0; j < prev_pc.points.size(); j++) {
+            for (int j = 0; j < Q.cols(); j++) {
                 Eigen::Vector2d q;
-                q << prev_pc.points[i].x, prev_pc.points[i].y;
+                q << prev_pc.points[j].x, prev_pc.points[j].y;
                 if (i == 0) {
-                    Q.push_back(q);
+                    Q.col(j) = q; 
                 }
                 double curr_dist = (p - q).norm();
                 if (curr_dist < min_dist) {
@@ -105,8 +108,8 @@ Eigen::MatrixXd icp_serial(int n_itr) {
         Eigen::MatrixXd R = U * V.transpose();
         Eigen::VectorXd t = mu_Q - R * mu_P;
         if (!(didFirstItr)) {
-            for (size_t col = 0; col < P.size(); col++) {
-                P_mat.col(col) = P[col];
+            for (size_t col = 0; col < P.cols(); col++) {
+                P_mat.col(col) = P.col(col);
             } // P_mat = 2 x N
         }
         // std::cout << "Made it inside! R:" << R.rows() << "x" << R.cols() << " P_mat:" << P_mat.rows() << "x" << P_mat.cols() << " t:" << t.size() << std::endl;
