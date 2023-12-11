@@ -14,6 +14,7 @@ class LidarPointCloudSubscriber:
 
         # Create a subscriber for the PointCloud topic
         self.pointcloud_sub = rospy.Subscriber('lidar_pointcloud', PointCloud, self.pointcloud_callback)
+        self.pointcloud_pub = rospy.Publisher('lidar_aligned', PointCloud, queue_size=10)
         self.prev_points = None
 
     # P is moved data, q is prev data
@@ -38,7 +39,14 @@ class LidarPointCloudSubscriber:
         elif q.shape[1] > p.shape[1]:
             q = q[:, :p.shape[1]]
 
-        iterations=10
+        icp_itr_default = 3
+        # Get the parameter 'icp_itr' from the ROS parameter server
+        icp_itr = rospy.get_param("icp_itr", icp_itr_default)
+
+        # Check if the parameter retrieval was successful
+        if icp_itr is None:
+            rospy.logerror("Failed to get parameter 'icp_itr'. Using default value of %d.", icp_itr_default)
+            icp_itr = icp_itr_default
         kernel=lambda diff: 1.0
         
         def get_correspondence_indices(P, Q):
@@ -82,7 +90,9 @@ class LidarPointCloudSubscriber:
         P_copy = p.copy()
         corresp_values = []
         exclude_indices = []
-        for i in range(iterations):
+        R_tot = np.zeros((2, 2))
+        t_tot = np.zeros((2, 1))
+        for i in range(icp_itr):
             center_of_P = center_data(P_copy, exclude_indices=exclude_indices)
             correspondences = get_correspondence_indices(p, q)
             corresp_values.append(correspondences)
@@ -90,11 +100,13 @@ class LidarPointCloudSubscriber:
             cov, exclude_indices = compute_cross_covariance(p, q, correspondences, kernel)
             U, S, V_T = np.linalg.svd(cov)
             R = U.dot(V_T)  
-            t = center_of_Q - R.dot(center_of_P)  
+            t = center_of_Q - R.dot(center_of_P)
+            R_tot = R.dot(R_tot)
+            t_tot = R.dot(t_tot) + t
             P_copy = R.dot(P_copy) + t
             P_values.append(P_copy)
         corresp_values.append(corresp_values[-1])
-        return R, t
+        return R_tot, t_tot, p_copy
 
     def icp_gauss_newton(self, points, prev_points):
         pass
@@ -113,9 +125,23 @@ class LidarPointCloudSubscriber:
         #     print(f"Point {i + 1}: ({point.x}, {point.y}, {point.z}), Intensity: {intensity}")
         
         if self.prev_points is not None:
-            R, t = self.icp_svd(points, self.prev_points)
+            R, t, aligned_points = self.icp_svd(points, self.prev_points)
             print(f"Rotation:{R}\nTranslation:{t}")
-        
+            # create pointcloud message
+            pointcloud_msg = PointCloud()
+            pointcloud_msg.header.stamp = rospy.Time.now()
+            pointcloud_msg.header.frame_id = "sonic/lidar_frame"
+            print("Aligned Points shape: ", aligned_points.shape)
+            points = [Point32(x=float(aligned_points[i][0]), y=float(aligned_points[i][1]), z=0.0) for i in range(aligned_points.shape[0])]
+            pointcloud_msg.points = points
+
+            # Add intensity values as an additional channel with default value 1
+            intensity_channel = ChannelFloat32()
+            intensity_channel.name = "intensity"
+            intensity_channel.values = [1.0] * len(scan)
+            pointcloud_msg.channels.append(intensity_channel)
+
+            self.pointcloud_pub.publish(pointcloud_msg)
         self.prev_points = points
 
 if __name__ == '__main__':
