@@ -55,7 +55,12 @@ rosrun icp lidar_pub.py
 
 When using RVIZ
 In a seperate terminal run: 
-rosrun tf static_transform_publisher 0 0 0 0 0 0 1 map sonic/lidar_frame 10
+rosrun tf static_transform_publisher 0 0 0 0 0 0.1 1 map sonic/lidar_frame 10
+
+  File "/code/cuda_duckietown/packages/icp_ws/src/icp/src/icp_serial.py", line 81, in icp_svd
+    norm_values.append(np.linalg.norm(p - q))
+ValueError: operands could not be broadcast together with shapes (2,411) (2,386) 
+
 
 # Todo: 
 Find correct frame adjustment, need to add some rotation
@@ -66,6 +71,7 @@ If the lidar throws an exception saying 'rplidar.RPLidarException: Incorrect des
 Try running again, then unplug and replug in the lidar and restart the node/ It's likely the lidar wasn't stopped properly. Also make sure your cable is good.
 
 Add `--device=/dev/ttyACM0` to the end of the `dts devel run` command to pass the device information through to the docker container.
+dts devel run -H sonic.local --cmd bash -f -- --device=/dev/ttyUSB0 
 
 ## Getting CUDA to work on Duckiebot
 
