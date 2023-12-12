@@ -36,22 +36,21 @@ Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P,
 Eigen::MatrixXd icp_serial(int n_itr) {
     // std::cout << "Success! PC Sizes: " << prev_pc.points.size() << " : " << curr_pc.points.size() << std::endl;
     // Check that I have 2 point cloud scans
-    // std::cout << "Made it inside!" << std::endl;
-    /* BEGIN ICP ALGORITHM */
     Eigen::MatrixXd P;
     Eigen::MatrixXd Q;
-    Eigen::MatrixXd P_mat;    
+    Eigen::MatrixXd P_mat;  
+    if (curr_pc.points.size() < prev_pc.points.size()) {
+        P = Eigen::MatrixXd(2, curr_pc.points.size());
+        Q = Eigen::MatrixXd(2, curr_pc.points.size());
+        P_mat = Eigen::MatrixXd(2, curr_pc.points.size());
+    } else {
+        P = Eigen::MatrixXd(2, prev_pc.points.size());
+        Q = Eigen::MatrixXd(2, prev_pc.points.size());
+        P_mat = Eigen::MatrixXd(2, prev_pc.points.size());
+    }
+    /* BEGIN ICP ALGORITHM */  
     bool didFirstItr = false;
     for (int itr = 0; itr < n_itr; itr++) {
-        if (curr_pc.points.size() < prev_pc.points.size()) {
-            P = Eigen::MatrixXd(2, curr_pc.points.size());
-            Q = Eigen::MatrixXd(2, curr_pc.points.size());
-            P_mat = Eigen::MatrixXd(2, curr_pc.points.size());
-        } else {
-            P = Eigen::MatrixXd(2, prev_pc.points.size());
-            Q = Eigen::MatrixXd(2, prev_pc.points.size());
-            P_mat = Eigen::MatrixXd(2, prev_pc.points.size());
-        }
         // std::cout << "Made it inside! 1" << std::endl;
         // Find Correspondences
         int tot_dist = 0;

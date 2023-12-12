@@ -20,6 +20,11 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(CUDA REQUIRED)
 
+# set CUDA_NVCC_FLAGS as you would do with CXX/C FLAGS                        
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -DMY_DEF=1")
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMY_DEF=1" )
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DMY_DEF=1" )
+
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -149,8 +154,11 @@ target_link_libraries(icp_serial_node ${catkin_LIBRARIES})
 # add_executable(icp_parallel_thread src/icp_parallel_thread.cpp)
 # target_link_libraries(icp_parallel_thread ${catkin_LIBRARIES})
 
-cuda_add_executable(icp_parallel_cuda_node src/icp_parallel_cuda.cpp)
-target_link_libraries(icp_parallel_cuda_node ${CUDA_LIBRARIES})
+# cuda compile GPU_CODE for executable
+cuda_compile(ICP_CU_O src/icp_parallel_cuda.cu)
+cuda_add_executable(icp_parallel_cuda_node ${ICP_CU_O})
+target_link_libraries(icp_parallel_cuda_node ${catkin_LIBRARIES})
+# add_dependencies( hello_lib ${PROJECT_NAME}_generate_messages_cpp  ${LINE_PROFILER_CU_O} )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

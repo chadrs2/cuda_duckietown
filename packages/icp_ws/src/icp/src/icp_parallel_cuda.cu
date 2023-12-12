@@ -35,46 +35,90 @@ Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P,
   return cov;
 }
 
+// __global__ void find_correspondences(
+//   Eigen::MatrixXd* d_P,
+//   Eigen::MatrixXd* d_Q,
+//   bool didFirstItr,
+//   Eigen::MatrixXd* d_P_mat,
+//   int* d_correspondences,
+//   geometry_msgs::Point32* d_prev_pc,
+//   geometry_msgs::Point32* d_curr_pc) {
+  
+//   int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+//   if (i < d_P->cols()) {
+//     Eigen::Vector2d p;
+//     if (!didFirstItr) {
+//       p << d_curr_pc[i].x, d_curr_pc[i].y;
+//       d_P->col(i) = p;
+//     } else {
+//       p = d_P_mat->col(i);
+//     }
+
+//     double min_dist = 1000.0;
+//     int corr_idx = -1;
+
+//     // Parallel loop over Q
+//     for (int j = threadIdx.y * blockDim.y; j < d_Q->cols(); j += blockDim.y) {
+//       Eigen::Vector2d q;
+//       q << d_prev_pc[j].x, d_prev_pc[j].y;
+//       double curr_dist = (p - q).norm();
+//       if (i == 0) {
+//         d_Q->col(j) = q; 
+//       }
+//       if (curr_dist < min_dist) {
+//         min_dist = curr_dist;
+//         corr_idx = j;
+//       }
+//     }
+
+//     d_correspondences[i] = corr_idx;
+//   }
+// }
 __global__ void find_correspondences(
-  Eigen::MatrixXd* d_P,
-  Eigen::MatrixXd* d_Q,
-  bool didFirstItr,
-  Eigen::MatrixXd* d_P_mat,
+  double* d_P,
+  double* d_Q,
   int* d_correspondences,
-  geometry_msgs::Point32* d_prev_pc,
-  geometry_msgs::Point32* d_curr_pc) {
+  const geometry_msgs::Point32* d_prev_pc,
+  const geometry_msgs::Point32* d_curr_pc,
+  const int num_pts, const bool didFirstItr) {
   
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (i < d_P->cols()) {
-    Eigen::Vector2d p;
+  if (i < num_pts) {
+    double px, py;
     if (!didFirstItr) {
-      p << d_curr_pc[i].x, d_curr_pc[i].y;
-      d_P->col(i) = p;
+      px = d_curr_pc[i].x;
+      py = d_curr_pc[i].y;
+      d_P[i * 2] = px;
+      d_P[i * 2 + 1] = py;
     } else {
-      p = d_P_mat->col(i);
+      px = d_P[i * 2];
+      py = d_P[i * 2 + 1];
     }
 
     double min_dist = 1000.0;
     int corr_idx = -1;
 
     // Parallel loop over Q
-    for (int j = threadIdx.y * blockDim.y; j < d_Q->cols(); j += blockDim.y) {
-      Eigen::Vector2d q;
-      q << d_prev_pc[j].x, d_prev_pc[j].y;
-      double curr_dist = (p - q).norm();
+    for (int j = threadIdx.y * blockDim.y; j < num_pts; j += blockDim.y) {
+      double qx, qy;
+      qx = d_prev_pc[j].x;
+      qy = d_prev_pc[j].y;
       if (i == 0) {
-        d_Q->col(j) = q; 
+        d_Q[j * 2] = qx;
+        d_Q[j * 2 + 1] = qy;
       }
+      double curr_dist = std::sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy));
       if (curr_dist < min_dist) {
         min_dist = curr_dist;
         corr_idx = j;
       }
     }
-
     d_correspondences[i] = corr_idx;
   }
 }
+
 
 Eigen::MatrixXd icp_parallel(int n_itr) {
     // std::cout << "Success! PC Sizes: " << prev_pc.points.size() << " : " << curr_pc.points.size() << std::endl;
@@ -83,106 +127,66 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
     /* BEGIN ICP ALGORITHM */
     Eigen::MatrixXd P;
     Eigen::MatrixXd Q;
-    Eigen::MatrixXd P_mat;
     if (curr_pc.points.size() < prev_pc.points.size()) {
-        P = Eigen::MatrixXd(2, curr_pc.points.size());
-        Q = Eigen::MatrixXd(2, curr_pc.points.size());
-        P_mat = Eigen::MatrixXd(2, curr_pc.points.size());
+        P = Eigen::MatrixXd::Zero(2, curr_pc.points.size());
+        Q = Eigen::MatrixXd::Zero(2, curr_pc.points.size());
     } else {
-        P = Eigen::MatrixXd(2, prev_pc.points.size());
-        Q = Eigen::MatrixXd(2, prev_pc.points.size());
-        P_mat = Eigen::MatrixXd(2, prev_pc.points.size());
+        P = Eigen::MatrixXd::Zero(2, prev_pc.points.size());
+        Q = Eigen::MatrixXd::Zero(2, prev_pc.points.size());
     }
-    int correspondences[P.cols()];
+    int num_pts = P.cols();
+    int correspondences[num_pts];
     // Convert point cloud data to arrays of Point32
-    geometry_msgs::Point32* prev_pc_array = new geometry_msgs::Point32[prev_pc.points.size()];
-    geometry_msgs::Point32* curr_pc_array = new geometry_msgs::Point32[curr_pc.points.size()];
-    for (int i = 0; i < prev_pc.points.size(); i++) {
+    geometry_msgs::Point32* prev_pc_array = new geometry_msgs::Point32[num_pts];
+    geometry_msgs::Point32* curr_pc_array = new geometry_msgs::Point32[num_pts];
+    for (int i = 0; i < num_pts; i++) {
         prev_pc_array[i] = prev_pc.points[i];
-    }
-    for (int i = 0; i < curr_pc.points.size(); i++) {
         curr_pc_array[i] = curr_pc.points[i];
     }
 
     // CUDA Defintions
     // Set grid and block dimensions
-    dim3 gridDim(P.cols() / blockDim.x + (P.cols() % blockDim.x != 0), Q.cols() / blockDim.y + (Q.cols() % blockDim.y != 0));
     dim3 blockDim(16, 1);
+    dim3 gridDim(P.cols() / blockDim.x + (P.cols() % blockDim.x != 0), 1);
 
     // Allocate device memory for P, Q, P_mat, and correspondences
-    Eigen::MatrixXd* d_P;
-    Eigen::MatrixXd* d_Q;
-    Eigen::MatrixXd* d_P_mat;
+    double* d_P;
+    double* d_Q;
     int* d_correspondences;
     geometry_msgs::Point32* d_prev_pc;
     geometry_msgs::Point32* d_curr_pc;
-    cudaMalloc(&d_prev_pc, sizeof(geometry_msgs::Point32) * P.cols());
-    cudaMalloc(&d_curr_pc, sizeof(geometry_msgs::Point32) * P.cols());
-    cudaMalloc(&d_correspondences, sizeof(int) * P.cols());
-    cudaMalloc(&d_P, sizeof(Eigen::MatrixXd) * P.rows() * P.cols());
-    cudaMalloc(&d_Q, sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols());
-    cudaMalloc(&d_P_mat, sizeof(Eigen::MatrixXd) * P_mat.rows() * P_mat.cols());
+    cudaMalloc(&d_P, sizeof(double) * P.rows() * P.cols());
+    cudaMalloc(&d_Q, sizeof(double) * Q.rows() * Q.cols());
+    cudaMalloc(&d_correspondences, sizeof(int) * num_pts);
+    cudaMalloc(&d_prev_pc, sizeof(geometry_msgs::Point32) * num_pts);
+    cudaMalloc(&d_curr_pc, sizeof(geometry_msgs::Point32) * num_pts);
     
-    // Copy P, Q, and P_mat to device memory
-    cudaMemcpy(d_prev_pc, prev_pc_array, sizeof(geometry_msgs::Point32) * P.cols(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_curr_pc, curr_pc_array, sizeof(geometry_msgs::Point32) * P.cols(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_correspondences, correspondences, sizeof(int) * P.cols(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_P, P.data(), sizeof(Eigen::MatrixXd) * P.rows() * P.cols(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_Q, Q.data(), sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_P_mat, P_mat.data(), sizeof(Eigen::MatrixXd) * P_mat.rows() * P_mat.cols(), cudaMemcpyHostToDevice);
-
-
+    // Copy kernel variables to device memory
+    cudaMemcpy(d_P, P.data(), sizeof(double) * P.rows() * P.cols(), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_Q, Q.data(), sizeof(double) * Q.rows() * Q.cols(), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_correspondences, correspondences, sizeof(int) * num_pts, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_prev_pc, prev_pc_array, sizeof(geometry_msgs::Point32) * num_pts, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_curr_pc, curr_pc_array, sizeof(geometry_msgs::Point32) * num_pts, cudaMemcpyHostToDevice);
+    
     bool didFirstItr = false;
     for (int itr = 0; itr < n_itr; itr++) {
         // Find Correspondences
-        int tot_dist = 0;
-
         //******* DO KERNEL HERE *******//
         // Launch the kernel
-        find_correspondences<<<gridDim, blockDim>>>(d_P, d_Q, didFirstItr, d_P_mat, d_correspondences, d_prev_pc, d_curr_pc);
+        find_correspondences<<<gridDim, blockDim>>>(d_P, d_Q, d_correspondences, d_prev_pc, d_curr_pc, num_pts, didFirstItr);
+        cudaDeviceSynchronize(); // wait for all blocks in the launch to finish processing
         // Copy correspondences back to host memory
-        cudaMemcpy(correspondences, d_correspondences, P.cols() * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(correspondences, d_correspondences, sizeof(int) * num_pts, cudaMemcpyDeviceToHost);
         if (itr == 0) {
-          cudaMemcpy(P.data(), d_P, sizeof(Eigen::MatrixXd) * P.rows() * P.cols(), cudaMemcpyDeviceToHost);
-          cudaMemcpy(Q.data(), d_Q, sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols(), cudaMemcpyDeviceToHost);
+          cudaMemcpy(P.data(), d_P, sizeof(double) * P.rows() * P.cols(), cudaMemcpyDeviceToHost);
+          cudaMemcpy(Q.data(), d_Q, sizeof(double) * Q.rows() * Q.cols(), cudaMemcpyDeviceToHost);
         }
-        // for (int i = 0; i < P.cols(); i++) {
-        //     Eigen::Vector2d p;
-        //     if (!(didFirstItr)) {
-        //         p << curr_pc.points[i].x, curr_pc.points[i].y;
-        //         P.col(i) = p; 
-        //     } else {
-        //         p = P_mat.col(i);
-        //     }
-        //     double min_dist = 1000.0;
-        //     int corr_idx = -1;
-        //     for (int j = 0; j < Q.cols(); j++) {
-        //         Eigen::Vector2d q;
-        //         q << prev_pc.points[j].x, prev_pc.points[j].y;
-        //         if (i == 0) {
-        //             Q.col(j) = q; 
-        //         }
-        //         double curr_dist = (p - q).norm();
-        //         if (curr_dist < min_dist) {
-        //             min_dist = curr_dist;
-        //             corr_idx = j;
-        //         }
-        //     }
-        //     correspondences.push_back(corr_idx);
-        // }
         //******* STOP KERNEL *******//
 
         // Compute Mean of Point Clouds & Cross-Covariance
         Eigen::Vector2d mu_Q = compute_mean(Q);
-        Eigen::Vector2d mu_P;
-        Eigen::Matrix2d cov;
-        if (!(didFirstItr)) {
-            mu_P = compute_mean(P);
-            cov = compute_cross_covariance(P,Q,correspondences);
-        } else {
-            mu_P = compute_mean(P_mat);
-            cov = compute_cross_covariance(P_mat,Q,correspondences);
-        }
+        Eigen::Vector2d mu_P = compute_mean(P);
+        Eigen::Matrix2d cov = compute_cross_covariance(P,Q,correspondences);
 
         // SVD Decomposition
         Eigen::JacobiSVD<Eigen::MatrixXd> svd(cov, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -193,12 +197,7 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
         // Shift P's point cloud
         Eigen::MatrixXd R = U * V.transpose();
         Eigen::VectorXd t = mu_Q - R * mu_P;
-        if (!(didFirstItr)) {
-            for (size_t col = 0; col < P.cols(); col++) {
-                P_mat.col(col) = P.col(col);
-            } // P_mat = 2 x N
-        }
-        P_mat = R * P_mat + t.replicate(1,P_mat.cols());
+        P = R * P + t.replicate(1,P.cols());
         if (!(didFirstItr)) {
             didFirstItr = true;
         }
@@ -212,9 +211,8 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
     cudaFree(d_curr_pc);
     cudaFree(d_P);
     cudaFree(d_Q);
-    cudaFree(d_P_mat);
     /* END ICP ALGORITHM */
-    return P_mat;
+    return P;
 }
 
 sensor_msgs::PointCloud get_pc_msg(Eigen::MatrixXd P_mat) {
