@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
+find_package(CUDA REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -122,6 +123,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/src/eigen
   ${PROJECT_SOURCE_DIR}/src
+  ${CUDA_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -143,6 +145,12 @@ target_link_libraries(test_node ${catkin_LIBRARIES})
 
 add_executable(icp_serial_node src/icp_serial.cpp)
 target_link_libraries(icp_serial_node ${catkin_LIBRARIES})
+
+add_executable(icp_parallel_thread src/icp_parallel_thread.cpp)
+target_link_libraries(icp_parallel_thread ${catkin_LIBRARIES})
+
+# cuda_add_executable(icp_parallel_cuda_node src/icp_parallel_cuda.cpp)
+# target_link_libraries(icp_parallel_cuda_node ${catkin_LIBRARIES} ${CUDA_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
