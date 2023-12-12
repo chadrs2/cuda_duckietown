@@ -105,7 +105,7 @@ sensor_msgs::PointCloud get_pc_msg(Eigen::MatrixXd P) {
     sensor_msgs::PointCloud pc;
     pc.header.stamp = ros::Time::now();
     pc.header.frame_id = "sonic/lidar_frame";
-    for (int i = 0; i < P_mat.cols(); i++) {
+    for (int i = 0; i < P.cols(); i++) {
         geometry_msgs::Point32 point;
         point.x = P.col(i)[0];
         point.y = P.col(i)[1];
