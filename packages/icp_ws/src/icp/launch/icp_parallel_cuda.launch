@@ -9,7 +9,7 @@
     <!-- Start RVIZ in dts_gui_tools terminal -->
     <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find(your_package_name)/path/to/your/config_file.rviz)" /> -->
 
-    <!-- Start ICP Serial Node -->
-    <node pkg="icp" type="icp_serial_node" name="icp_serial_node" output="screen" />
+    <!-- Start ICP Parallel Cuda Node -->
+    <node pkg="icp" type="icp_parallel_cuda_node" name="icp_parallel_cuda_node" output="screen" />
 
 </launch>
