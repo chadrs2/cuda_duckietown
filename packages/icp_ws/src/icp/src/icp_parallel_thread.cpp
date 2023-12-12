@@ -57,7 +57,60 @@ Eigen::MatrixXd icp_parallel_threads(int n_itr, int num_threads) {
         // Find Correspondences
         int tot_dist = 0;
         int correspondences[P.cols()];
+        
         // ------------ Parallelize here ------------
+        int pc_size = std::min(curr_pc.points.size(), prev_pc.points.size());
+        int chunk_size = (pc_size + num_threads - 1) / num_threads; // Calculate chunk size
+        // ROS_INFO("P size %d, Q size %d", P.cols(), Q.cols());
+        // ROS_INFO("PC_Size: %d", pc_size);
+        std::vector<std::thread> threads;
+        // ROS_INFO("Running %d parallel threads with %d chunk size", num_threads, chunk_size);        
+        for (int t = 0; t < num_threads; t++) {
+            int start_idx = t * chunk_size;
+            int end_idx = std::min((t + 1) * chunk_size, pc_size);
+
+            // ----------------------------------------------------------------------
+            sensor_msgs::PointCloud& curr_pc_ref = curr_pc;
+            sensor_msgs::PointCloud& prev_pc_ref = prev_pc;
+            threads.emplace_back([start_idx, end_idx, &P, &P_mat, &correspondences, curr_pc_ref, prev_pc_ref, &didFirstItr, &Q]() {
+            // threads.emplace_back([start_idx, end_idx, &P, &P_mat, &correspondences, curr_pc, prev_pc, &didFirstItr, &Q]() {
+                // ROS_INFO("Running icp_parallel_threads with start index %d and end index %d", start_idx, end_idx);
+                for (int i = start_idx; i < end_idx; i++) {
+                    // ROS_INFO("Running icp_parallel_threads with i %d", i);
+                    Eigen::Vector2d p;
+                    if (!(didFirstItr)) {
+                        // ROS_INFO("First Iteration on icp_parallel_threads with i %d", i);
+                        p << curr_pc.points[i].x, curr_pc.points[i].y;
+                        P.col(i) = p; 
+                        // ROS_INFO("Finished First Iteration on icp_parallel_threads with i %d", i);
+                    } else {
+                        p = P_mat.col(i);
+                    }
+                    double min_dist = 1000.0;
+                    int corr_idx = -1;
+                    for (int j = 0; j < Q.cols(); j++) {
+                        Eigen::Vector2d q;
+                        // ROS_INFO("Setting q on icp_parallel_threads with i %d and j %d", i, j);
+                        q << prev_pc.points[j].x, prev_pc.points[j].y;
+                        if (i == 0) {
+                            // ROS_INFO("Setting first Q on icp_parallel_threads with i %d and j %d", i, j);
+                            Q.col(j) = q; 
+                        }
+                        // ROS_INFO("Calculating distance on icp_parallel_threads with i %d and j %d", i, j);
+                        double curr_dist = (p - q).norm();
+                        if (curr_dist < min_dist) {
+                            // ROS_INFO("Setting new min_dist on icp_parallel_threads with i %d and j %d", i, j);
+                            min_dist = curr_dist;
+                            corr_idx = j;
+                        }
+                    }
+                    // ROS_INFO("Setting correspondences on icp_parallel_threads with i %d", i);
+                    correspondences[i] = corr_idx;
+                }
+            });
+            // ----------------------------------------------------------------------    
+        }
+        // ROS_INFO("For loops completed");
         // for (int i = 0; i < P.cols(); i++) {
         //     Eigen::Vector2d p;
         //     if (!(didFirstItr)) {
@@ -83,50 +136,15 @@ Eigen::MatrixXd icp_parallel_threads(int n_itr, int num_threads) {
         //     correspondences[i] = corr_idx;
         // }
         // Find Correspondences using a thread pool
-        std::vector<std::thread> threads;
-
-        for (int t = 0; t < num_threads; t++) {
-            int start_idx = t * chunk_size;
-            int end_idx = std::min((t + 1) * chunk_size, pc_size);
-
-            threads.emplace_back([start_idx, end_idx, &P, &P_mat, &correspondences, &curr_pc, &prev_pc]() {
-                for (int i = start_idx; i < end_idx; i++) {
-                    Eigen::Vector2d p;
-                    if (!(didFirstItr)) {
-                        p << curr_pc.points[i].x, curr_pc.points[i].y;
-                        P.col(i) = p; 
-                    } else {
-                        p = P_mat.col(i);
-                    }
-                    double min_dist = 1000.0;
-                    int corr_idx = -1;
-                    for (int j = 0; j < Q.cols(); j++) {
-                        Eigen::Vector2d q;
-                        q << prev_pc.points[j].x, prev_pc.points[j].y;
-                        if (i == 0) {
-                            Q.col(j) = q; 
-                        }
-                        double curr_dist = (p - q).norm();
-                        if (curr_dist < min_dist) {
-                            min_dist = curr_dist;
-                            corr_idx = j;
-                        }
-                    }
-                    correspondences[i] = corr_idx;
-                }
-            });
-        }
 
         // Wait for all threads to finish
         for (auto& thread : threads) {
             thread.join();
         }
+        // ROS_INFO("Threads joined");
 
-
-        // Wait for all threads to finish
-        for (auto& thread : threads) {
-            thread.join();
-        }
+        // Convert correspondences to vector
+        std::vector<int> correspondences_vec(correspondences, correspondences + pc_size);
         // std::cout << "Made it inside! 2" << std::endl;
 
         // Compute Mean of Point Clouds & Cross-Covariance
@@ -135,10 +153,10 @@ Eigen::MatrixXd icp_parallel_threads(int n_itr, int num_threads) {
         Eigen::Matrix2d cov;
         if (!(didFirstItr)) {
             mu_P = compute_mean(P);
-            cov = compute_cross_covariance(P,Q,correspondences);
+            cov = compute_cross_covariance(P,Q,correspondences_vec);
         } else {
             mu_P = compute_mean(P_mat);
-            cov = compute_cross_covariance(P_mat,Q,correspondences);
+            cov = compute_cross_covariance(P_mat,Q,correspondences_vec);
         }
         
         // std::cout << "Made it inside! 4" << std::endl;
@@ -219,12 +237,12 @@ int main(int argc, char** argv)
         if (!(prev_pc.points.empty()) && !(curr_pc.points.empty())) {
             if (!nh.getParam("icp_itr", icp_itr))
             {
-                ROS_ERROR("Failed to get parameter 'icp_itr'. Using default value of 5.");
+                ROS_WARN("Failed to get parameter 'icp_itr'. Using default value of 5.");
                 icp_itr = 5;  // Default value
             }  
             if (!nh.getParam("icp_num_threads", num_threads))
             {
-                ROS_ERROR("Failed to get parameter 'icp_num_threads'. Using default value of 4.");
+                ROS_WARN("Failed to get parameter 'icp_num_threads'. Using default value of 4.");
                 num_threads = 4;  // Default value
             }  
 
