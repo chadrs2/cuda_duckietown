@@ -14,7 +14,7 @@ class LidarPointCloudSubscriber:
 
         # Create a subscriber for the PointCloud topic
         self.pointcloud_sub = rospy.Subscriber('lidar_pointcloud', PointCloud, self.pointcloud_callback)
-        self.pointcloud_pub = rospy.Publisher('lidar_aligned', PointCloud, queue_size=10)
+        self.pointcloud_pub = rospy.Publisher('lidar_aligned', PointCloud, queue_size=1)
         self.prev_points = None
 
     # P is moved data, q is prev data
@@ -39,7 +39,7 @@ class LidarPointCloudSubscriber:
         elif q.shape[1] > p.shape[1]:
             q = q[:, :p.shape[1]]
 
-        icp_itr_default = 3
+        icp_itr_default = 5
         # Get the parameter 'icp_itr' from the ROS parameter server
         icp_itr = rospy.get_param("icp_itr", icp_itr_default)
 
@@ -101,12 +101,12 @@ class LidarPointCloudSubscriber:
             U, S, V_T = np.linalg.svd(cov)
             R = U.dot(V_T)  
             t = center_of_Q - R.dot(center_of_P)
-            R_tot = R.dot(R_tot)
-            t_tot = R.dot(t_tot) + t
+            # R_tot = R.dot(R_tot)
+            # t_tot = R.dot(t_tot) + t
             P_copy = R.dot(P_copy) + t
             P_values.append(P_copy)
         corresp_values.append(corresp_values[-1])
-        return R_tot, t_tot, p_copy
+        return P_copy
 
     def icp_gauss_newton(self, points, prev_points):
         pass
@@ -125,20 +125,25 @@ class LidarPointCloudSubscriber:
         #     print(f"Point {i + 1}: ({point.x}, {point.y}, {point.z}), Intensity: {intensity}")
         
         if self.prev_points is not None:
+            start_time = rospy.Time.now()
             R, t, aligned_points = self.icp_svd(points, self.prev_points)
-            print(f"Rotation:{R}\nTranslation:{t}")
+            end_time = rospy.Time.now()
+            time_taken = end_time - start_time
+            # convert to seconds
+            time_taken = time_taken.secs + time_taken.nsecs * 1e-9
+            print(f"Rotation:{R}\nTranslation:{t}\nTime taken:{time_taken}")
             # create pointcloud message
             pointcloud_msg = PointCloud()
             pointcloud_msg.header.stamp = rospy.Time.now()
             pointcloud_msg.header.frame_id = "sonic/lidar_frame"
             print("Aligned Points shape: ", aligned_points.shape)
-            points = [Point32(x=float(aligned_points[i][0]), y=float(aligned_points[i][1]), z=0.0) for i in range(aligned_points.shape[0])]
+            points = [Point32(x=float(aligned_points[0][i]), y=float(aligned_points[1][i]), z=0.0) for i in range(aligned_points.shape[0])]
             pointcloud_msg.points = points
 
             # Add intensity values as an additional channel with default value 1
             intensity_channel = ChannelFloat32()
             intensity_channel.name = "intensity"
-            intensity_channel.values = [1.0] * len(scan)
+            intensity_channel.values = [1.0] * len(points)
             pointcloud_msg.channels.append(intensity_channel)
 
             self.pointcloud_pub.publish(pointcloud_msg)

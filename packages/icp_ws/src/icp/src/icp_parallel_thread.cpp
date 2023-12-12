@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <thread>
+#include <time.h>
 
 #include "ros/ros.h"
 
@@ -28,7 +29,7 @@ Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P,
                                         const std::vector<int>& correspondences) {
   Eigen::Matrix2d cov = Eigen::Matrix2d::Zero();
   for (const int& i : correspondences) {
-    cov += Q.col(i) * P.col(i).transpose();
+    cov += Q.col(correspondences[i]) * P.col(i).transpose();
   }
   return cov;
 }
@@ -233,6 +234,7 @@ int main(int argc, char** argv)
     sensor_msgs::PointCloud icp_msg;
     int icp_itr;
     int num_threads;
+    struct timespec start_time, end_time;
     while (ros::ok()) {
         if (!(prev_pc.points.empty()) && !(curr_pc.points.empty())) {
             if (!nh.getParam("icp_itr", icp_itr))
@@ -245,8 +247,12 @@ int main(int argc, char** argv)
                 ROS_WARN("Failed to get parameter 'icp_num_threads'. Using default value of 4.");
                 num_threads = 4;  // Default value
             }  
-
+            clock_gettime(CLOCK_MONOTONIC, &start_time);
             P_mat = icp_parallel_threads(icp_itr, num_threads);
+            clock_gettime(CLOCK_MONOTONIC, &end_time);
+            long double elapsed_time = (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) / 1e9L;
+            std::cout << "Execution time: " << elapsed_time << " seconds" << std::endl;
+            
             icp_msg = get_pc_msg(P_mat);
             pc_pub.publish(icp_msg);
         }
