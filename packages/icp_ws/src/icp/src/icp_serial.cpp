@@ -27,7 +27,7 @@ Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P,
                                         const std::vector<int>& correspondences) {
   Eigen::Matrix2d cov = Eigen::Matrix2d::Zero();
   for (const int& i : correspondences) {
-    cov += Q.col(i) * P.col(i).transpose();
+    cov += Q.col(correspondences[i]) * P.col(i).transpose();
   }
   return cov;
 }

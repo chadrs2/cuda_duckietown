@@ -146,11 +146,11 @@ target_link_libraries(test_node ${catkin_LIBRARIES})
 add_executable(icp_serial_node src/icp_serial.cpp)
 target_link_libraries(icp_serial_node ${catkin_LIBRARIES})
 
-add_executable(icp_parallel_thread src/icp_parallel_thread.cpp)
-target_link_libraries(icp_parallel_thread ${catkin_LIBRARIES})
+# add_executable(icp_parallel_thread src/icp_parallel_thread.cpp)
+# target_link_libraries(icp_parallel_thread ${catkin_LIBRARIES})
 
-# cuda_add_executable(icp_parallel_cuda_node src/icp_parallel_cuda.cpp)
-# target_link_libraries(icp_parallel_cuda_node ${catkin_LIBRARIES} ${CUDA_LIBRARIES})
+cuda_add_executable(icp_parallel_cuda_node src/icp_parallel_cuda.cpp)
+target_link_libraries(icp_parallel_cuda_node ${CUDA_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

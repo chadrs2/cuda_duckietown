@@ -2,6 +2,8 @@
 #include <vector>
 
 #include <Eigen/Dense>
+
+#include <cuda.h>
 #include <cuda_runtime.h>
 
 #include "ros/ros.h"
@@ -25,50 +27,44 @@ Eigen::Vector2d compute_mean(const Eigen::MatrixXd& pc) {
 
 Eigen::Matrix2d compute_cross_covariance(const Eigen::MatrixXd& P, 
                                         const Eigen::MatrixXd& Q, 
-                                        const std::vector<int>& correspondences) {
+                                        const int correspondences[]) {
   Eigen::Matrix2d cov = Eigen::Matrix2d::Zero();
-  for (const int& i : correspondences) {
-    cov += Q.col(i) * P.col(i).transpose();
+  for (int i = 0; i < P.cols(); ++i) {
+    cov += Q.col(correspondences[i]) * P.col(i).transpose();
   }
   return cov;
 }
 
-// __global__ void add_kernel(float* a, float* b, float* c, int n) {
-//   int i = blockIdx.x * blockDim.x + threadIdx.x;
-//   if (i < n) {
-//     c[i] = a[i] + b[i];
-//   }
-// }
 __global__ void find_correspondences(
-  const Eigen::MatrixXd& d_P,
-  const Eigen::MatrixXd& d_Q,
+  Eigen::MatrixXd* d_P,
+  Eigen::MatrixXd* d_Q,
   bool didFirstItr,
-  Eigen::MatrixXd& d_P_mat,
-  int& d_correspondences,
-  geometry_msgs::Point32& d_prev_pc,
-  geometry_msgs::Point32& d_curr_pc
-  ) {
+  Eigen::MatrixXd* d_P_mat,
+  int* d_correspondences,
+  geometry_msgs::Point32* d_prev_pc,
+  geometry_msgs::Point32* d_curr_pc) {
+  
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (i < d_P.cols()) {
+  if (i < d_P->cols()) {
     Eigen::Vector2d p;
     if (!didFirstItr) {
       p << d_curr_pc[i].x, d_curr_pc[i].y;
-      d_P.col(i) = p;
+      d_P->col(i) = p;
     } else {
-      p = d_P_mat.col(i);
+      p = d_P_mat->col(i);
     }
 
     double min_dist = 1000.0;
     int corr_idx = -1;
 
     // Parallel loop over Q
-    for (int j = threadIdx.y * blockDim.y; j < d_Q.cols(); j += blockDim.y) {
+    for (int j = threadIdx.y * blockDim.y; j < d_Q->cols(); j += blockDim.y) {
       Eigen::Vector2d q;
       q << d_prev_pc[j].x, d_prev_pc[j].y;
       double curr_dist = (p - q).norm();
       if (i == 0) {
-        d_Q.col(j) = q; 
+        d_Q->col(j) = q; 
       }
       if (curr_dist < min_dist) {
         min_dist = curr_dist;
@@ -111,7 +107,7 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
     // CUDA Defintions
     // Set grid and block dimensions
     dim3 gridDim(P.cols() / blockDim.x + (P.cols() % blockDim.x != 0), Q.cols() / blockDim.y + (Q.cols() % blockDim.y != 0));
-    dim3 blockDim(8, 8);
+    dim3 blockDim(16, 1);
 
     // Allocate device memory for P, Q, P_mat, and correspondences
     Eigen::MatrixXd* d_P;
@@ -120,17 +116,17 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
     int* d_correspondences;
     geometry_msgs::Point32* d_prev_pc;
     geometry_msgs::Point32* d_curr_pc;
-    cudaMalloc(&d_prev_pc, sizeof(geometry_msgs::Point32) * prev_pc_array.size());
-    cudaMalloc(&d_curr_pc, sizeof(geometry_msgs::Point32) * curr_pc_array.size());
+    cudaMalloc(&d_prev_pc, sizeof(geometry_msgs::Point32) * P.cols());
+    cudaMalloc(&d_curr_pc, sizeof(geometry_msgs::Point32) * P.cols());
     cudaMalloc(&d_correspondences, sizeof(int) * P.cols());
     cudaMalloc(&d_P, sizeof(Eigen::MatrixXd) * P.rows() * P.cols());
     cudaMalloc(&d_Q, sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols());
     cudaMalloc(&d_P_mat, sizeof(Eigen::MatrixXd) * P_mat.rows() * P_mat.cols());
     
     // Copy P, Q, and P_mat to device memory
-    cudaMemcpy(d_prev_pc, prev_pc_array, sizeof(geometry_msgs::Point32) * prev_pc_array.size(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_curr_pc, curr_pc_array, sizeof(geometry_msgs::Point32) * curr_pc_array.size(), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_correspondences, correspondences.data(), sizeof(int) * P.cols(), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_prev_pc, prev_pc_array, sizeof(geometry_msgs::Point32) * P.cols(), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_curr_pc, curr_pc_array, sizeof(geometry_msgs::Point32) * P.cols(), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_correspondences, correspondences, sizeof(int) * P.cols(), cudaMemcpyHostToDevice);
     cudaMemcpy(d_P, P.data(), sizeof(Eigen::MatrixXd) * P.rows() * P.cols(), cudaMemcpyHostToDevice);
     cudaMemcpy(d_Q, Q.data(), sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols(), cudaMemcpyHostToDevice);
     cudaMemcpy(d_P_mat, P_mat.data(), sizeof(Eigen::MatrixXd) * P_mat.rows() * P_mat.cols(), cudaMemcpyHostToDevice);
@@ -143,9 +139,9 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
 
         //******* DO KERNEL HERE *******//
         // Launch the kernel
-        find_correspondences<<<gridDim, blockDim>>>(*d_P, *d_Q, didFirstItr, *d_P_mat, *d_correspondences, *d_prev_pc, *d_curr_pc);
+        find_correspondences<<<gridDim, blockDim>>>(d_P, d_Q, didFirstItr, d_P_mat, d_correspondences, d_prev_pc, d_curr_pc);
         // Copy correspondences back to host memory
-        cudaMemcpy(correspondences.data(), d_correspondences.data(), correspondences.size() * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(correspondences, d_correspondences, P.cols() * sizeof(int), cudaMemcpyDeviceToHost);
         if (itr == 0) {
           cudaMemcpy(P.data(), d_P, sizeof(Eigen::MatrixXd) * P.rows() * P.cols(), cudaMemcpyDeviceToHost);
           cudaMemcpy(Q.data(), d_Q, sizeof(Eigen::MatrixXd) * Q.rows() * Q.cols(), cudaMemcpyDeviceToHost);
@@ -211,7 +207,7 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
     delete[] prev_pc_array;
     delete[] curr_pc_array;
     // Free device memory
-    cudaFree(d_correspondences)
+    cudaFree(d_correspondences);
     cudaFree(d_prev_pc);
     cudaFree(d_curr_pc);
     cudaFree(d_P);
@@ -271,8 +267,8 @@ int main(int argc, char** argv)
             {
                 ROS_ERROR("Failed to get parameter 'icp_itr'. Using default value of 1.");
                 icp_itr = 1;  // Default value
-            }        
-            P_mat = icp_serial(icp_itr);
+            }
+            P_mat = icp_parallel(icp_itr);
             icp_msg = get_pc_msg(P_mat);
             pc_pub.publish(icp_msg);
         }
