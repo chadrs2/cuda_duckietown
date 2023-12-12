@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <time.h>
 
 #include <Eigen/Dense>
 
@@ -256,7 +257,8 @@ int main(int argc, char** argv)
     ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud>("icp_pointcloud", 1);
 
     // ROS spin to wait for messages
-    Eigen::MatrixXd P_mat;
+    struct timespec start_time, end_time;
+    Eigen::MatrixXd P;
     sensor_msgs::PointCloud icp_msg;
     int icp_itr;
     while (ros::ok()) {
@@ -266,8 +268,12 @@ int main(int argc, char** argv)
                 ROS_ERROR("Failed to get parameter 'icp_itr'. Using default value of 1.");
                 icp_itr = 1;  // Default value
             }
-            P_mat = icp_parallel(icp_itr);
-            icp_msg = get_pc_msg(P_mat);
+            clock_gettime(CLOCK_MONOTONIC, &start_time);
+            P = icp_parallel(icp_itr);
+            clock_gettime(CLOCK_MONOTONIC, &end_time);
+            long double elapsed_time = (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) / 1e9L;
+            std::cout << "Execution time: " << elapsed_time << " seconds" << std::endl;
+            icp_msg = get_pc_msg(P);
             pc_pub.publish(icp_msg);
         }
         ros::spinOnce();
