@@ -19,9 +19,10 @@ class my_lidar:
 
         # Create a publisher for the custom topic with your custom message type
         # self.lidar_pub = rospy.Publisher('lidar_scans', Lidar, queue_size=10)
-        self.lidar_pub = rospy.Publisher('lidar_scans', LaserScan, queue_size=10)
-
-        self.pointcloud_pub = rospy.Publisher('lidar_pointcloud', PointCloud, queue_size=10)
+        queue_size_default = 10
+        icp_itr = rospy.get_param("lidar_queue_size", queue_size_default)
+        self.lidar_pub = rospy.Publisher('lidar_scans', LaserScan, queue_size=queue_size_default)
+        self.pointcloud_pub = rospy.Publisher('lidar_pointcloud', PointCloud, queue_size=queue_size_default)
 
         self.info = self.lidar.get_info()
         self.health = self.lidar.get_health()

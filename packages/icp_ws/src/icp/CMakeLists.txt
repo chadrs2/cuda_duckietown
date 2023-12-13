@@ -145,8 +145,11 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/icp_node.cpp)
-add_executable(test_node src/test.cpp)
-target_link_libraries(test_node ${catkin_LIBRARIES})
+# add_executable(test_node src/test.cpp)
+# target_link_libraries(test_node ${catkin_LIBRARIES})
+
+add_executable(icp_serial_pose_node src/icp_serial_pose.cpp)
+target_link_libraries(icp_serial_pose_node ${catkin_LIBRARIES})
 
 add_executable(icp_serial_node src/icp_serial.cpp)
 target_link_libraries(icp_serial_node ${catkin_LIBRARIES})
@@ -155,9 +158,9 @@ add_executable(icp_parallel_thread src/icp_parallel_thread.cpp)
 target_link_libraries(icp_parallel_thread ${catkin_LIBRARIES})
 
 ## cuda compile GPU_CODE for executable
-# cuda_compile(ICP_CU_O src/icp_parallel_cuda.cu)
-# cuda_add_executable(icp_parallel_cuda_node ${ICP_CU_O})
-# target_link_libraries(icp_parallel_cuda_node ${catkin_LIBRARIES})
+cuda_compile(ICP_CU_O src/icp_parallel_cuda.cu)
+cuda_add_executable(icp_parallel_cuda_node ${ICP_CU_O})
+target_link_libraries(icp_parallel_cuda_node ${catkin_LIBRARIES})
 ## add_dependencies( hello_lib ${PROJECT_NAME}_generate_messages_cpp  ${LINE_PROFILER_CU_O} )
 
 ## Rename C++ executable without prefix

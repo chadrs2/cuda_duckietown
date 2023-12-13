@@ -147,7 +147,7 @@ Eigen::MatrixXd icp_parallel(int n_itr) {
 
     // CUDA Defintions
     // Set grid and block dimensions
-    dim3 blockDim(16, 1);
+    dim3 blockDim(8, 1);
     dim3 gridDim(P.cols() / blockDim.x + (P.cols() % blockDim.x != 0), 1);
 
     // Allocate device memory for P, Q, P_mat, and correspondences
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
 
     // Create a ROS NodeHandle
     ros::NodeHandle nh;
-    ros::Rate rate(1); // Hz
+    ros::Rate rate(5); // Hz
 
     // Subscribe to the custom topic with your custom message type
     ros::Subscriber pc_sub = nh.subscribe<sensor_msgs::PointCloud>("lidar_pointcloud", 10, lidarMessageCallback);

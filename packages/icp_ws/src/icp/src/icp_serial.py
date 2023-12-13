@@ -5,6 +5,7 @@ from sensor_msgs.msg import PointCloud
 from geometry_msgs.msg import Point32
 from sensor_msgs.msg import ChannelFloat32
 import numpy as np
+from geometry_msgs.msg import Transform
 
 
 class LidarPointCloudSubscriber:
@@ -15,6 +16,7 @@ class LidarPointCloudSubscriber:
         # Create a subscriber for the PointCloud topic
         self.pointcloud_sub = rospy.Subscriber('lidar_pointcloud', PointCloud, self.pointcloud_callback)
         self.pointcloud_pub = rospy.Publisher('lidar_aligned', PointCloud, queue_size=1)
+        self.transform_pub = rospy.Publisher('transform', Transform, queue_size=10)
         self.prev_points = None
 
     # P is moved data, q is prev data
@@ -90,7 +92,7 @@ class LidarPointCloudSubscriber:
         P_copy = p.copy()
         corresp_values = []
         exclude_indices = []
-        R_tot = np.zeros((2, 2))
+        R_tot = np.eye(2)
         t_tot = np.zeros((2, 1))
         for i in range(icp_itr):
             center_of_P = center_data(P_copy, exclude_indices=exclude_indices)
@@ -101,15 +103,41 @@ class LidarPointCloudSubscriber:
             U, S, V_T = np.linalg.svd(cov)
             R = U.dot(V_T)  
             t = center_of_Q - R.dot(center_of_P)
-            # R_tot = R.dot(R_tot)
+            R_tot = R @ R_tot
+            t_tot = R.dot(t_tot + t) # Could be one of these two methods
             # t_tot = R.dot(t_tot) + t
             P_copy = R.dot(P_copy) + t
             P_values.append(P_copy)
         corresp_values.append(corresp_values[-1])
-        return P_copy
+        return R_tot, t_tot, P_copy
 
     def icp_gauss_newton(self, points, prev_points):
         pass
+
+    def publish_transform(self, rotation_matrix, translation_vector):
+        # Create a Transform message
+        transform_msg = Transform()
+        yaw = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+        roll = 0
+        pitch = 0
+        qx = 0
+        qy = 0
+        qz = np.sin(yaw/2)
+        qw = np.cos(yaw/2)
+ 
+        transform_msg.rotation.x = qx
+        transform_msg.rotation.y = qy
+        transform_msg.rotation.z = qz
+        transform_msg.rotation.w = qw
+
+        # Set the translation vector (3x1 part of the transformation)
+        transform_msg.translation.x = translation_vector[0][0]
+        transform_msg.translation.y = translation_vector[1][0]
+        transform_msg.translation.z = 0
+
+        # Publish the Transform message
+        self.transform_pub.publish(transform_msg)
+
 
     def pointcloud_callback(self, pointcloud_msg):
         # Extract information from the received PointCloud message
@@ -137,7 +165,7 @@ class LidarPointCloudSubscriber:
             pointcloud_msg.header.stamp = rospy.Time.now()
             pointcloud_msg.header.frame_id = "sonic/lidar_frame"
             print("Aligned Points shape: ", aligned_points.shape)
-            points = [Point32(x=float(aligned_points[0][i]), y=float(aligned_points[1][i]), z=0.0) for i in range(aligned_points.shape[0])]
+            points = [Point32(x=float(aligned_points[0][i]), y=float(aligned_points[1][i]), z=0.0) for i in range(aligned_points.shape[1])]
             pointcloud_msg.points = points
 
             # Add intensity values as an additional channel with default value 1
@@ -147,6 +175,7 @@ class LidarPointCloudSubscriber:
             pointcloud_msg.channels.append(intensity_channel)
 
             self.pointcloud_pub.publish(pointcloud_msg)
+            self.publish_transform(R, t)
         self.prev_points = points
 
 if __name__ == '__main__':

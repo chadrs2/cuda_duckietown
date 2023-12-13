@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="icp_itr" type="int" value="5"/>
+    <param name="lidar_queue_size" type="int" value="1"/>
+    
+    <node name='lidar_pub_node' pkg='icp' type='lidar_pub.py' output='screen'/>
+
+    <!-- Start ICP Serial Node -->
+    <!-- <node name='icp_serial_py' pkg='icp' type='icp_serial.py' output='screen'/> -->
+    <node pkg="icp" type="icp_serial_pose_node" name="icp_serial_pose_node" output="screen" />
+    
+    <node name='robot_pose_node' pkg='icp' type='robot_pose_node.py' output='screen'/>
+
+</launch>
